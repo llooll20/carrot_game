@@ -1,3 +1,6 @@
+import { Player } from '../domain/Player.js';
+import { Market } from '../domain/Market.js';
+
 export class Start extends Phaser.Scene {
 
     constructor() {
@@ -6,40 +9,174 @@ export class Start extends Phaser.Scene {
 
     preload() {
         this.load.image('background', 'assets/space.png');
-        this.load.image('logo', 'assets/phaser.png');
-
-        //  The ship sprite is CC0 from https://ansimuz.itch.io - check out his other work!
-        this.load.spritesheet('ship', 'assets/spaceship.png', { frameWidth: 176, frameHeight: 96 });
     }
 
     create() {
-        this.background = this.add.tileSprite(640, 360, 1280, 720, 'background');
+        // -------------------------
+        // Game Objects
+        // -------------------------
 
-        const logo = this.add.image(640, 200, 'logo');
+        this.background = this.add.tileSprite(
+            640,
+            360,
+            1280,
+            720,
+            'background'
+        );
 
-        const ship = this.add.sprite(640, 360, 'ship');
+        // -------------------------
+        // Game State
+        // -------------------------
 
-        ship.anims.create({
-            key: 'fly',
-            frames: this.anims.generateFrameNumbers('ship', { start: 0, end: 2 }),
-            frameRate: 15,
-            repeat: -1
-        });
+        this.player = new Player();
+        this.market = new Market();
 
-        ship.play('fly');
+        // 테스트용 초기값
+        this.player.Money = 1000;
 
-        this.tweens.add({
-            targets: logo,
-            y: 400,
-            duration: 1500,
-            ease: 'Sine.inOut',
-            yoyo: true,
-            loop: -1
-        });
+        // 당근 0개
+        this.player.Resources.set('carrot', 5);
+
+        // 시장 당근 100개
+        this.market.MarketSupplies.set('carrot', 100);
+
+        // 당근 가격 50
+        this.market.MarketPrices.set('carrot', 50);
+
+        // -------------------------
+        // UI
+        // -------------------------
+
+        this.createPlayerUI();
+        this.createMarketUI();
+        this.createPurchaseButton();
+
+        this.updateUI();
     }
 
     update() {
         this.background.tilePositionX += 2;
     }
-    
+
+    createPlayerUI() {
+
+        this.playerMoneyText = this.add.text(
+            50,
+            50,
+            '',
+            {
+                fontSize: '28px',
+                color: '#ffffff'
+            }
+        );
+
+        this.playerCarrotText = this.add.text(
+            50,
+            90,
+            '',
+            {
+                fontSize: '28px',
+                color: '#ffffff'
+            }
+        );
+    }
+
+    createMarketUI() {
+
+        this.marketCarrotText = this.add.text(
+            950,
+            50,
+            '',
+            {
+                fontSize: '28px',
+                color: '#ffffff'
+            }
+        );
+
+        this.marketPriceText = this.add.text(
+            950,
+            90,
+            '',
+            {
+                fontSize: '28px',
+                color: '#ffffff'
+            }
+        );
+    }
+
+    createPurchaseButton() {
+
+        const button = this.add.text(
+            640,
+            360,
+            '당근 구매\n5개 구매',
+            {
+                fontSize: '32px',
+                color: '#ffffff',
+                backgroundColor: '#333333',
+                padding: {
+                    left: 30,
+                    right: 30,
+                    top: 20,
+                    bottom: 20
+                },
+                align: 'center'
+            }
+        ).setOrigin(0.5);
+
+        button.setInteractive();
+
+        button.on('pointerdown', () => {
+
+            console.log('구매 전:', this.player.Resources.get('carrot'));
+
+
+            this.player.Purchase(
+                this.market,
+                'carrot',
+                5
+            );
+
+              console.log('구매 후:', this.player.Resources.get('carrot'));
+            this.updateUI();
+
+             console.log('UI 갱신 후:', this.playerCarrotText.text);
+        });
+
+        button.on('pointerover', () => {
+            button.setTint(0x44ff44);
+        });
+
+        button.on('pointerout', () => {
+            button.clearTint();
+        });
+    }
+
+    updateUI() {
+        console.log(this.player.Resources);
+        console.log(this.player.Resources.get('carrot'));
+
+        const carrot = this.player.Resources.get('carrot') ?? 0;
+        const marketCarrot =
+            this.market.MarketSupplies.get('carrot') ?? 0;
+
+        const price =
+            this.market.MarketPrices.get('carrot') ?? 0;
+
+        this.playerMoneyText.setText(
+            `Money: ${this.player.Money}`
+        );
+
+        this.playerCarrotText.setText(
+        `Carrot: ${carrot}`
+        );
+
+        this.marketCarrotText.setText(
+            `Market Carrot: ${marketCarrot}`
+        );
+
+        this.marketPriceText.setText(
+            `Price: ${price}`
+        );
+    }
 }
