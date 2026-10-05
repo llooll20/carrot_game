@@ -1,10 +1,9 @@
 
 //거래 결과를 나타내는 클래스
 export class TransactionResult {
-    constructor(success, resource, resourceAmount, moneyAmount) {
+    constructor(success, resources, moneyAmount) {
         this.Success = success;
-        this.Resource = resource;
-        this.ResourceAmount = resourceAmount;
+        this.Resources = resources;
         this.MoneyAmount = moneyAmount;
     }
 }

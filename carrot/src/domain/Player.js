@@ -1,5 +1,6 @@
 import { TransactionResult } from '../models/TransactionResult.js';
-import { Market } from './Market.js';
+import { Market } from '../systems/Market.js';
+import { Transport } from '../models/Transport.js';
 
 export class Player {
     /** @type {number} */
@@ -8,32 +9,31 @@ export class Player {
     /** @type {Map<Resource, number>} */
     Resources;
 
+    /** @type {Transport} */
+    Transport;
+
+
     constructor() {
         this.Money = 1000;
         this.Resources = new Map([['carrot', 10]]);
+        this.Transport = new Transport(1, 100);
     }
-
-    /**
-     * 시장에 자원 구매를 요청하고 거래 결과를 플레이어 상태에 반영한다.
-     * @param {Market} market 거래를 요청할 시장
-     * @param {Resource} resource 구매할 자원
-     * @param {number} amount 구매 수량
-     * @returns {boolean} 구매 성공 여부
-     */
     
+    // 구매를 위해 상품 거래를 요청하고 결과를 플레이어 상태에 반영하는 메서드
     Purchase(market, resource, amount) {
         const result = market.ProcessPurchase(this, resource, amount);
         this.ApplyTransactionResult(result);
         return result.Success;
     }
 
+    // 판매를 위해 운송 장치로 상품을 적재
     /** @returns {boolean} */
-    Sell(market, resource, amount) {
-        const result = market.ProcessSale(this, resource, amount);
-        this.ApplyTransactionResult(result);
-        return result.Success;
+    setResourceToTransport(resource, amount) {
+        this.Transport.addResource(resource, amount);
+        return true;
     }
 
+    // 거래 결과를 플레이어 상태에 반영하는 메서드
     /** @param {TransactionResult} result */
     ApplyTransactionResult(result) {
         if (!result.Success)
@@ -41,12 +41,10 @@ export class Player {
 
         this.Money += result.MoneyAmount;
 
-        const currentAmount =
-            this.Resources.get(result.Resource) ?? 0;
-
-        this.Resources.set(
-            result.Resource,
-            currentAmount + result.ResourceAmount
-        );
+        for (const [resource, amount] of result.Resources) 
+        {
+            const currentAmount = this.Resources.get(resource) ?? 0;
+            this.Resources.set( resource, currentAmount + amount);
+        }
     }
 }

@@ -1,0 +1,15 @@
+[
+    {
+        "ResourceNumber": 1,
+        "OutputAmount": 3,
+        "CycleTime": 3,
+        "Materials": [
+            {
+                "ResourceNumber": 2,
+                "Amount": 1
+            }
+        ],
+        "RequiredWorkers": 1,
+        "ProductionBase": "vegetable garden"
+    }
+]

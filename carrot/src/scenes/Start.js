@@ -1,5 +1,8 @@
 import { Player } from '../domain/Player.js';
-import { Market } from '../domain/Market.js';
+import { Market } from '../systems/Market.js';
+import { TurnSystem } from '../systems/TurnSystem.js';
+import { Turn } from '../models/Turn.js';
+import { DataManager } from '../systems/DataManager.js';
 
 export class Start extends Phaser.Scene {
 
@@ -9,6 +12,11 @@ export class Start extends Phaser.Scene {
 
     preload() {
         this.load.image('background', 'assets/space.png');
+
+        this.load.json('Resource', 'src/data/Resource.json');
+        this.load.json('Recipe', 'src/data/Recipe.json');
+        this.load.json('Market', 'src/data/Market.json');
+
     }
 
     create() {
@@ -28,20 +36,26 @@ export class Start extends Phaser.Scene {
         // Game State
         // -------------------------
 
-        this.player = new Player();
-        this.market = new Market();
+        const resources = this.cache.json.get('Resource');
+        const recipes = this.cache.json.get('Recipe');
+        const market = this.cache.json.get('Market');
 
+        this.dataManager = new DataManager();
+        this.dataManager.LoadData(
+            resources,
+            recipes,
+            market
+        );
+
+        this.player = new Player();
+        this.market = new Market(this.dataManager);
+        this.turn = new Turn();
+        this.turnSystem = new TurnSystem(this.turn, this.market, this.player);
         // 테스트용 초기값
         this.player.Money = 1000;
 
         // 당근 0개
         this.player.Resources.set('carrot', 5);
-
-        // 시장 당근 100개
-        this.market.MarketSupplies.set('carrot', 100);
-
-        // 당근 가격 50
-        this.market.MarketPrices.set('carrot', 50);
 
         // -------------------------
         // UI
@@ -50,6 +64,9 @@ export class Start extends Phaser.Scene {
         this.createPlayerUI();
         this.createMarketUI();
         this.createPurchaseButton();
+        this.createLoadButton();
+        this.createTurnEndButton();
+        this.createTransportUI();
 
         this.updateUI();
     }
@@ -104,6 +121,57 @@ export class Start extends Phaser.Scene {
         );
     }
 
+    createLoadButton() {
+
+    const button = this.add.text(
+        640,
+        480,
+        '당근 적재\n5개 적재',
+        {
+            fontSize: '28px',
+            color: '#ffffff',
+            backgroundColor: '#333333',
+            padding: {
+                left: 25,
+                right: 25,
+                top: 15,
+                bottom: 15
+            },
+            align: 'center'
+        }
+    ).setOrigin(0.5);
+
+    button.setInteractive();
+
+    button.on('pointerdown', () => {
+
+        const amount = 5;
+        const resource = 1;
+
+        // Player가 가지고 있는 당근 확인
+        const currentAmount =
+            this.player.Resources.get(resource) ?? 0;
+
+        if (currentAmount < amount) {
+            console.log('당근이 부족합니다.');
+            return;
+        }
+
+        // Transport에 적재
+        this.player.setResourceToTransport(resource, amount);
+
+        this.updateUI();
+    });
+
+    button.on('pointerover', () => {
+        button.setTint(0x44ff44);
+    });
+
+    button.on('pointerout', () => {
+        button.clearTint();
+    });
+}
+
     createPurchaseButton() {
 
         const button = this.add.text(
@@ -111,9 +179,9 @@ export class Start extends Phaser.Scene {
             360,
             '당근 구매\n5개 구매',
             {
-                fontSize: '32px',
-                color: '#ffffff',
-                backgroundColor: '#333333',
+                  fontSize: '32px',
+                  color: '#ffffff',
+                 backgroundColor: '#333333',
                 padding: {
                     left: 30,
                     right: 30,
@@ -121,26 +189,81 @@ export class Start extends Phaser.Scene {
                     bottom: 20
                 },
                 align: 'center'
-            }
+         }
         ).setOrigin(0.5);
 
         button.setInteractive();
+        button.on('pointerdown', () => {
+
+            const resource = 1;
+            const amount = 5;
+            console.log('구매 전:', this.player.Resources.get(resource));
+            this.player.Purchase(
+                this.market,
+                resource,
+                amount
+            );
+
+                console.log('구매 후:', this.player.Resources.get(resource));
+                this.updateUI();
+
+                console.log('UI 갱신 후:', this.playerCarrotText.text);
+            });
+
+            button.on('pointerover', () => {
+                button.setTint(0x44ff44);
+            });
+
+            button.on('pointerout', () => {
+                button.clearTint();
+            });
+        }
+
+        createTransportUI() {
+
+        this.transportText = this.add.text(
+            950,
+            600,
+            '',
+            {
+                fontSize: '24px',
+                color: '#ffffff',
+                backgroundColor: '#333333',
+                padding: {
+                    left: 15,
+                    right: 15,
+                    top: 15,
+                    bottom: 15
+                }
+            }
+        );
+    }
+
+    createTurnEndButton() {
+        const button = this.add.text(
+            50,
+            650,
+            '턴 종료',
+            {
+                fontSize: '28px',
+                color: '#ffffff',
+                backgroundColor: '#333333',
+                padding: {
+                    left: 25,
+                    right: 25,
+                    top: 15,
+                    bottom: 15
+                }
+            }
+        ).setInteractive();
 
         button.on('pointerdown', () => {
 
-            console.log('구매 전:', this.player.Resources.get('carrot'));
+            console.log('턴 종료');
 
+            this.turnSystem.EndTurn(this.turn, this.market, this.player);
 
-            this.player.Purchase(
-                this.market,
-                'carrot',
-                5
-            );
-
-              console.log('구매 후:', this.player.Resources.get('carrot'));
             this.updateUI();
-
-             console.log('UI 갱신 후:', this.playerCarrotText.text);
         });
 
         button.on('pointerover', () => {
@@ -153,15 +276,15 @@ export class Start extends Phaser.Scene {
     }
 
     updateUI() {
-        console.log(this.player.Resources);
-        console.log(this.player.Resources.get('carrot'));
 
-        const carrot = this.player.Resources.get('carrot') ?? 0;
-        const marketCarrot =
-            this.market.MarketSupplies.get('carrot') ?? 0;
+        const resource = 1; // 당근의 ResourceNumber
 
-        const price =
-            this.market.MarketPrices.get('carrot') ?? 0;
+        const carrot = this.player.Resources.get(resource) ?? 0;
+
+        const marketItem = this.market.MarketItems.get(resource);
+
+        const marketCarrot = marketItem?.Stock ?? 0;
+        const price = marketItem?.Price ?? 0;
 
         this.playerMoneyText.setText(
             `Money: ${this.player.Money}`
@@ -178,5 +301,15 @@ export class Start extends Phaser.Scene {
         this.marketPriceText.setText(
             `Price: ${price}`
         );
+
+        // 운송 장치 UI 갱신
+        const resources = this.player.Transport.getResources();
+        let transportText = 'Transport\n';
+
+        for (const [resource, amount] of resources) {
+            transportText += `${resource}: ${amount}\n`;
+        }
+
+        this.transportText.setText(transportText);
     }
 }
