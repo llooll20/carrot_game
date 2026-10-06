@@ -8,7 +8,7 @@ export class Market {
     constructor(dataManager) {
         this.MarketItems = new Map();
 
-        for (const data of dataManager.GetMarketData()) {
+        for (const data of dataManager.GetAllMarketData()) {
             this.MarketItems.set(data.ResourceNumber, {
                 Price: data.Price,
                 Stock: data.Stock
@@ -24,7 +24,7 @@ export class Market {
 
 
         const price = marketItem.Price;
-        const totalPrice = marketItem.Price * amount;
+        const totalPrice = price * amount;
         const supply = marketItem.Stock;
 
         const resources=new Map();
@@ -65,7 +65,6 @@ export class Market {
             const resourcePrice = amount * price;
 
             totalPrice += resourcePrice;
-            soldResources.set(resource, -amount);
 
             // 시장 자원 증가
             marketItem.Stock += amount;

@@ -34,6 +34,18 @@ export class Transport {
         this.Current_storage -= (currentAmount - newAmount);
     }
 
+    // 특정 자원을 가져오는 매서드
+    getResource(resource, amount) {
+        const currentAmount = this.Resources.get(resource) ?? 0;
+        this.removeResource(resource, amount);
+        return Math.min(currentAmount, amount);
+    }
+
+    // 특정 자원의 현재 수량을 반환하는 매서드
+    getResourceAmount(resource) {
+        return this.Resources.get(resource) ?? 0;
+    }
+
     // 전체 자원 제거 매서드
     clearResources() {
         this.Resources.clear();

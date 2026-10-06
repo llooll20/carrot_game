@@ -67,6 +67,7 @@ export class Start extends Phaser.Scene {
         this.createLoadButton();
         this.createTurnEndButton();
         this.createTransportUI();
+        this.createMarketButton();
 
         this.updateUI();
     }
@@ -120,7 +121,34 @@ export class Start extends Phaser.Scene {
             }
         );
     }
+    createMarketButton() {
+    const button = this.add.text(
+        640,
+        300,
+        '상점',
+        {
+            fontSize: '28px',
+            color: '#ffffff',
+            backgroundColor: '#333333',
+            padding: {
+                left: 25,
+                right: 25,
+                top: 15,
+                bottom: 15
+            }
+        }
+    ).setOrigin(0.5).setInteractive();
 
+    button.on('pointerdown', () => {
+        this.scene.launch('MarketWindow', {
+            player: this.player,
+            market: this.market
+        });
+        this.events.on('updateUI', () => {
+            this.updateUI();
+        });
+    });
+}
     createLoadButton() {
 
     const button = this.add.text(
@@ -218,8 +246,7 @@ export class Start extends Phaser.Scene {
                 button.clearTint();
             });
         }
-
-        createTransportUI() {
+    createTransportUI() {
 
         this.transportText = this.add.text(
             950,
@@ -237,6 +264,51 @@ export class Start extends Phaser.Scene {
                 }
             }
         );
+        // 당근 5개 반환 버튼
+    const returnButton = this.add.text(
+        950,
+        680,
+        '당근 5개 반환',
+        {
+            fontSize: '20px',
+            color: '#ffffff',
+            backgroundColor: '#555555',
+            padding: {
+                left: 10,
+                right: 10,
+                top: 10,
+                bottom: 10
+            }
+        }
+    )
+    .setInteractive();
+
+    returnButton.on('pointerover', () => {
+        returnButton.setTint(0x44ff44);
+    });
+
+    returnButton.on('pointerout', () => {
+        returnButton.clearTint();
+    });
+
+    returnButton.on('pointerdown', () => {
+        const resource = 1; // 당근 ResourceNumber
+        const amount = 5;
+
+        console.log('버튼 클릭됨');
+
+        const currentAmount =
+            this.player.Transport.getResourceAmount(resource);
+
+        if (currentAmount < amount) {
+            console.log('운송 중인 당근이 부족합니다.');
+            return;
+        }
+
+        this.player.getResourceFromTransport(resource, amount);
+
+        this.updateUI();
+        });
     }
 
     createTurnEndButton() {

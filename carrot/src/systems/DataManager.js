@@ -26,7 +26,13 @@ export class DataManager {
         );
     }
 
-    GetMarketData(resourceNumber) {
+    GetAllMarketData() {
         return this.marketData;
+    }
+    GetMarketData(resourceNumber) {
+        return this.marketData.find(
+            data =>
+                data.ResourceNumber === resourceNumber
+        );
     }
 }

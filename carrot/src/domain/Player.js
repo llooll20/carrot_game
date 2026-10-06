@@ -30,7 +30,16 @@ export class Player {
     /** @returns {boolean} */
     setResourceToTransport(resource, amount) {
         this.Transport.addResource(resource, amount);
+        this.Resources.set(resource, (this.Resources.get(resource) ?? 0) - amount);
         return true;
+    }
+
+    // 운송 장치에서 상품을 가져옴
+    /** @returns {boolean} */
+    getResourceFromTransport(resource, amount) {
+        const retrievedAmount = this.Transport.getResource(resource, amount);
+        this.Resources.set(resource, (this.Resources.get(resource) ?? 0) + retrievedAmount);
+        return true;    
     }
 
     // 거래 결과를 플레이어 상태에 반영하는 메서드
