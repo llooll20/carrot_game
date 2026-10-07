@@ -1,0 +1,27 @@
+[
+    {
+        "ProductionBaseNumber": 1,
+        "ProductionBaseName": "Land",
+        "_comment": "농작물을 생산하는 기본 토지"
+    },
+    {
+        "ProductionBaseNumber": 2,
+        "ProductionBaseName": "Greenhouse",
+        "_comment": "온실"
+    },
+    {
+        "ProductionBaseNumber": 3,
+        "ProductionBaseName": "Workshop",
+        "_comment": "작업장"
+    },
+    {
+        "ProductionBaseNumber": 4,
+        "ProductionBaseName": "Craftshop",
+        "_comment": "공방"
+    },
+    {
+        "ProductionBaseNumber": 5,
+        "ProductionBaseName": "Factory",
+        "_comment": "공장"
+    }
+]

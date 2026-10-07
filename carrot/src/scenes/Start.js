@@ -3,6 +3,8 @@ import { Market } from '../systems/Market.js';
 import { TurnSystem } from '../systems/TurnSystem.js';
 import { Turn } from '../models/Turn.js';
 import { DataManager } from '../systems/DataManager.js';
+import { ProductionBase } from '../models/ProductionBase.js'
+import { GameMap } from '../domain/GameMap.js';
 
 export class Start extends Phaser.Scene {
 
@@ -48,12 +50,15 @@ export class Start extends Phaser.Scene {
         );
 
         this.player = new Player();
-        this.market = new Market(this.dataManager);
-        this.turn = new Turn();
-        this.turnSystem = new TurnSystem(this.turn, this.market, this.player);
         // 테스트용 초기값
         this.player.Money = 1000;
 
+        this.map=new GameMap(10,10);
+        this.turn = new Turn();
+        this.turnSystem = new TurnSystem(this.turn, this.market, this.player);
+        
+
+        this.market = new Market(this.dataManager);
         // 당근 0개
         this.player.Resources.set('carrot', 5);
 
@@ -63,13 +68,62 @@ export class Start extends Phaser.Scene {
 
         this.createPlayerUI();
         this.createMarketUI();
-        this.createPurchaseButton();
         this.createLoadButton();
         this.createTurnEndButton();
         this.createTransportUI();
         this.createMarketButton();
-
+        this.createMap();
         this.updateUI();
+    }
+
+    createMap() {
+        const tileSize = 64;
+        this.tileObjects= new Map();
+
+        for (let y = 0; y < 10; y++) {
+            for (let x = 0; x < 10; x++) {
+
+                const tile = this.add.rectangle(
+                    x * tileSize + 300,
+                    y * tileSize + 100,
+                    tileSize,
+                    tileSize
+                );
+
+                tile.setStrokeStyle(1, 0xffffff);
+                tile.setInteractive();
+
+                //화면의 타일 객체 저장
+                this.tileObjects.set(`${x},${y}`, tile);
+
+                tile.on('pointerdown', () => {
+                    this.onTileClicked(x, y);
+                });
+            }
+        }
+    }
+    onTileClicked(x, y) {
+        const tile = this.map.getTile(x, y);
+
+        if (tile.ProductionBase !== null) {
+            console.log('이미 생산 기반이 있습니다.');
+            return;
+        }
+
+        const land = new ProductionBase(
+            this.player.NextProductionBase++,
+            'Land',
+            null,
+            { x, y }
+        );
+
+        this.player.ProductionBases.push(land);
+        tile.ProductionBase = land;
+
+        const tileObject = this.tileObjects.get(`${x},${y}`);
+        tileObject.setFillStyle(0x00ff00);
+
+        console.log('토지 설치 완료');
     }
 
     update() {
@@ -123,7 +177,7 @@ export class Start extends Phaser.Scene {
     }
     createMarketButton() {
     const button = this.add.text(
-        640,
+        1000,
         300,
         '상점',
         {
@@ -152,20 +206,19 @@ export class Start extends Phaser.Scene {
     createLoadButton() {
 
     const button = this.add.text(
-        640,
+        1000,
         480,
         '당근 적재\n5개 적재',
         {
-            fontSize: '28px',
+            fontSize: '24px',
             color: '#ffffff',
             backgroundColor: '#333333',
             padding: {
-                left: 25,
-                right: 25,
+                left: 15,
+                right: 15,
                 top: 15,
                 bottom: 15
-            },
-            align: 'center'
+            }
         }
     ).setOrigin(0.5);
 
@@ -188,64 +241,17 @@ export class Start extends Phaser.Scene {
         // Transport에 적재
         this.player.setResourceToTransport(resource, amount);
 
-        this.updateUI();
-    });
+            this.updateUI();
+        });
 
-    button.on('pointerover', () => {
-        button.setTint(0x44ff44);
-    });
+        button.on('pointerover', () => {
+            button.setTint(0x44ff44);
+        });
 
-    button.on('pointerout', () => {
-        button.clearTint();
-    });
-}
-
-    createPurchaseButton() {
-
-        const button = this.add.text(
-            640,
-            360,
-            '당근 구매\n5개 구매',
-            {
-                  fontSize: '32px',
-                  color: '#ffffff',
-                 backgroundColor: '#333333',
-                padding: {
-                    left: 30,
-                    right: 30,
-                    top: 20,
-                    bottom: 20
-                },
-                align: 'center'
-         }
-        ).setOrigin(0.5);
-
-        button.setInteractive();
-        button.on('pointerdown', () => {
-
-            const resource = 1;
-            const amount = 5;
-            console.log('구매 전:', this.player.Resources.get(resource));
-            this.player.Purchase(
-                this.market,
-                resource,
-                amount
-            );
-
-                console.log('구매 후:', this.player.Resources.get(resource));
-                this.updateUI();
-
-                console.log('UI 갱신 후:', this.playerCarrotText.text);
-            });
-
-            button.on('pointerover', () => {
-                button.setTint(0x44ff44);
-            });
-
-            button.on('pointerout', () => {
-                button.clearTint();
-            });
-        }
+        button.on('pointerout', () => {
+            button.clearTint();
+        });
+    }
     createTransportUI() {
 
         this.transportText = this.add.text(

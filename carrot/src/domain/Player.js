@@ -1,6 +1,7 @@
 import { TransactionResult } from '../models/TransactionResult.js';
 import { Market } from '../systems/Market.js';
 import { Transport } from '../models/Transport.js';
+import { ProductionBase } from '../models/ProductionBase.js';
 
 export class Player {
     /** @type {number} */
@@ -11,12 +12,15 @@ export class Player {
 
     /** @type {Transport} */
     Transport;
-
+    /** @type {ProductionBase[]} */
+    ProductionBases;
 
     constructor() {
         this.Money = 1000;
         this.Resources = new Map([['carrot', 10]]);
         this.Transport = new Transport(1, 100);
+        this.ProductionBases = [];
+        this.NextProductionBase=1;
     }
     
     // 구매를 위해 상품 거래를 요청하고 결과를 플레이어 상태에 반영하는 메서드
@@ -55,5 +59,24 @@ export class Player {
             const currentAmount = this.Resources.get(resource) ?? 0;
             this.Resources.set( resource, currentAmount + amount);
         }
+    }
+
+    // 생산기반을 플레이어에게 할당하는 메서드
+    setProductionBase(productionBase) {
+        this.ProductionBases.push(productionBase);
+    }
+
+    // 생산기반을 플레이어에게서 제거하는 메서드
+    removeProductionBase(number) {
+        const index = this.ProductionBases.findIndex((pb) => pb.Number === number);
+
+        if (index === -1) {   return false; }
+
+        this.ProductionBases.splice(index, 1);
+        return true;
+    }
+    // 생산기반을 정보를 가져오는 메서드
+    getProductionBases() {
+        return this.ProductionBases;
     }
 }
