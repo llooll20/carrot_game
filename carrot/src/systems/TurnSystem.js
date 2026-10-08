@@ -2,19 +2,24 @@
 
 import { Market } from './Market.js';
 import { Turn } from '../models/Turn.js';
+import { ProductionProcess } from './ProductionProcess.js';
 
 export class TurnSystem {
 
-    constructor(turn, market, player) {
+    constructor(turn, market, player, dataManager) {
         this.Turn = turn;
         this.Market = market;
         this.Player = player;
+        this.ProductionProcess=new ProductionProcess(player,dataManager);
+        this.DataManager=dataManager;
     }
 
     EndTurn() {
+        
         const salesResult = this.Market.ProcessSale(this.Player.Transport);
         this.Player.ApplyTransactionResult(salesResult);
         this.Player.Transport.clearResources();
+        this.ProductionProcess.ProcessAllProduction();
         this.Turn.NextTurn();
     }
 }

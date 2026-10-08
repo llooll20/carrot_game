@@ -1,4 +1,3 @@
-
 export class Employee {
     constructor(number, name) {
         this.Number = number;

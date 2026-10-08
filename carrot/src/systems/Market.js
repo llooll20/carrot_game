@@ -57,6 +57,19 @@ export class Market {
         const soldResources = new Map();
         let totalPrice = 0;
 
+        // 거래 결과지
+        const result = new TransactionResult(
+            false,
+            soldResources,
+            totalPrice
+        );
+
+        //아무것도 적재 x
+        if(resources===null)
+        {
+            return result;
+        }
+
         for (const [resource, amount] of resources) {
 
             const marketItem = this.MarketItems.get(resource);
@@ -70,11 +83,9 @@ export class Market {
             marketItem.Stock += amount;
         }
         // 거래 결과지
-        const result = new TransactionResult(
-            true,
-            soldResources,
-            totalPrice
-        );
+        result.Success=true;
+        result.Resources=soldResources;
+        result.MoneyAmount=totalPrice;
 
         return result;
     }

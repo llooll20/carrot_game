@@ -10,6 +10,6 @@
             }
         ],
         "RequiredWorkers": 1,
-        "ProductionBase": "vegetable garden"
+        "ProductionBaseNumber": 1
     }
 ]

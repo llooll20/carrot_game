@@ -2,26 +2,31 @@
     {
         "ProductionBaseNumber": 1,
         "ProductionBaseName": "Land",
+        "ProductionBaseType": "Agriculture",
         "_comment": "농작물을 생산하는 기본 토지"
     },
     {
         "ProductionBaseNumber": 2,
         "ProductionBaseName": "Greenhouse",
+        "ProductionBaseType": "Agriculture",
         "_comment": "온실"
     },
     {
         "ProductionBaseNumber": 3,
         "ProductionBaseName": "Workshop",
+        "ProductionBaseType": "Processing",
         "_comment": "작업장"
     },
     {
         "ProductionBaseNumber": 4,
         "ProductionBaseName": "Craftshop",
+        "ProductionBaseType": "Processing",
         "_comment": "공방"
     },
     {
         "ProductionBaseNumber": 5,
         "ProductionBaseName": "Factory",
+        "ProductionBaseType": "Processing",
         "_comment": "공장"
     }
 ]

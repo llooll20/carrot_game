@@ -5,6 +5,7 @@ import { Turn } from '../models/Turn.js';
 import { DataManager } from '../systems/DataManager.js';
 import { ProductionBase } from '../models/ProductionBase.js'
 import { GameMap } from '../domain/GameMap.js';
+import { Employee } from '../domain/Employee.js';
 
 export class Start extends Phaser.Scene {
 
@@ -42,6 +43,8 @@ export class Start extends Phaser.Scene {
         const recipes = this.cache.json.get('Recipe');
         const market = this.cache.json.get('Market');
 
+        
+
         this.dataManager = new DataManager();
         this.dataManager.LoadData(
             resources,
@@ -52,13 +55,15 @@ export class Start extends Phaser.Scene {
         this.player = new Player();
         // 테스트용 초기값
         this.player.Money = 1000;
-
-        this.map=new GameMap(10,10);
-        this.turn = new Turn();
-        this.turnSystem = new TurnSystem(this.turn, this.market, this.player);
-        
+        this.player.AddResource(2,100);
 
         this.market = new Market(this.dataManager);
+        this.map=new GameMap(10,10);
+        this.turn = new Turn();
+        this.turnSystem = new TurnSystem(this.turn, this.market, this.player, this.dataManager);
+        
+
+       
         // 당근 0개
         this.player.Resources.set('carrot', 5);
 
@@ -79,6 +84,7 @@ export class Start extends Phaser.Scene {
     createMap() {
         const tileSize = 64;
         this.tileObjects= new Map();
+        
 
         for (let y = 0; y < 10; y++) {
             for (let x = 0; x < 10; x++) {
@@ -103,6 +109,7 @@ export class Start extends Phaser.Scene {
         }
     }
     onTileClicked(x, y) {
+        const employee = new Employee(1,"Lee")
         const tile = this.map.getTile(x, y);
 
         if (tile.ProductionBase !== null) {
@@ -111,19 +118,26 @@ export class Start extends Phaser.Scene {
         }
 
         const land = new ProductionBase(
-            this.player.NextProductionBase++,
-            'Land',
-            null,
+            this.player.getProductionBaseNumber(),
+            1,
+            2,
             { x, y }
         );
 
+        //직원 배치
+        land.setAssingedEmployee(employee);
+        console.log("land:", land);
+        console.log("직원:", employee);
+        land.onActivate();
+
         this.player.ProductionBases.push(land);
-        tile.ProductionBase = land;
+        tile.ProductionBase = 1;
 
         const tileObject = this.tileObjects.get(`${x},${y}`);
         tileObject.setFillStyle(0x00ff00);
 
         console.log('토지 설치 완료');
+        console.log('플레이어 생산기반:', this.player.ProductionBases);
     }
 
     update() {

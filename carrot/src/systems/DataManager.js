@@ -19,10 +19,11 @@ export class DataManager {
         );
     }
 
-    GetRecipe(resourceNumber) {
-        return this.recipeData.find(
-            recipe =>
-                recipe.ResourceNumber === resourceNumber
+    GetRecipe(materialNumber) {
+        return this.recipeData.find(recipe =>
+            recipe.Materials.some(
+                material => material.ResourceNumber === materialNumber
+            )
         );
     }
 

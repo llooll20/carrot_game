@@ -56,14 +56,36 @@ export class Player {
 
         for (const [resource, amount] of result.Resources) 
         {
-            const currentAmount = this.Resources.get(resource) ?? 0;
-            this.Resources.set( resource, currentAmount + amount);
+            this.AddResource(resource, amount);
         }
+    }
+
+    //플레이어의 자원 추가
+    AddResource(resourceNumber, amount) {
+        const currentAmount =
+            this.Resources.get(resourceNumber) ?? 0;
+
+        this.Resources.set(
+            resourceNumber,
+            currentAmount + amount
+        );
+    }
+    //플레이어의 자원 삭제
+    RemoveResource(resourceNumber, amount)
+    {
+        const currentAmount =
+            this.Resources.get(resourceNumber) ?? 0;
+
+        this.Resources.set(
+            resourceNumber,
+            currentAmount - amount
+        );
     }
 
     // 생산기반을 플레이어에게 할당하는 메서드
     setProductionBase(productionBase) {
         this.ProductionBases.push(productionBase);
+        
     }
 
     // 생산기반을 플레이어에게서 제거하는 메서드
@@ -79,4 +101,10 @@ export class Player {
     getProductionBases() {
         return this.ProductionBases;
     }
+    //생산 기반 번호 상승
+    getProductionBaseNumber() {
+        return this.NextProductionBase++;
+    }
+
+
 }
