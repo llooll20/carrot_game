@@ -11,15 +11,16 @@ export class ProductionProcess {
 
     ProcessAllProduction()
     {
+        //모든 생산 기반 순회
         for (const productionBase of this.Owner.ProductionBases) {
             const materialNumber = productionBase.AssignedResource;
 
              if (materialNumber === null) {
                 continue;
             }
+
             //레시피 가져오기
             const recipe = this.DataManager.GetRecipe(materialNumber);
-
             if (recipe === null) {
                 continue;
             }
@@ -31,30 +32,32 @@ export class ProductionProcess {
             {
                 continue;
             }
-            let hasMaterials = true;
-
-            //필요한 재료 확인
-            for (const material of recipe.Materials) {
-                const amount = this.Owner.Resources.get(material.ResourceNumber) ?? 0;
-
-                if (amount < material.Amount) {
-                    hasMaterials = false;
-                    break;
-                }
-            }
-
-            if(!hasMaterials)
-            {
-                continue;
-            }
-
             
-            //생산에 필요한 재료 소비
-            for (const material of recipe.Materials) {
-                this.Owner.RemoveResource(
-                    material.ResourceNumber,
-                    material.Amount
-                );
+
+            //재료의 배정 여부 확인
+            if(!productionBase.HasConsumedMaterials){
+                let hasMaterials = true;
+
+                // 필요한 재료 확인
+                for(const material of recipe.Materials){
+                    const amount = this.Owner.Resources.get(material.ResourceNumber) ?? 0;
+
+                    if(amount < material.Amount){
+                        hasMaterials=false;
+                        break;
+                    }
+                }
+                if(!hasMaterials){
+                    continue;
+                }
+                //생산에 필요한 재료 소비
+                for(const material of recipe.Materials){
+                    this.Owner.RemoveResource(
+                        material.ResourceNumber,
+                        material.Amount
+                    );
+                }
+                productionBase.HasConsumedMaterials=true;
             }
 
             

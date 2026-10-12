@@ -1,0 +1,68 @@
+[
+    {
+        "Contract_Id": 1,
+        "Name": "500 당근 월 거래",
+        "ContractType": "RecurringTrade",
+        "Participants": {
+            "Parties": [
+                {
+                    "ActorType": "Player",
+                    "ActorId": 1,
+                    "Role": "Seller"
+                },
+                {
+                    "ActorType": "NPC",
+                    "ActorId": 1,
+                    "Role": "Buyer"
+                }
+            ],
+            "Guarantor": {
+                "ActorType": "NPC",
+                "ActorId": 2
+            }
+        },
+        "Content": {
+            "Action": "TransferResource",
+            "ResourceNumber": 1,
+            "Amount": 500,
+            "From": "Seller",
+            "To": "Buyer",
+            "Frequency": "Monthly"
+        },
+        "Period": {
+            "Duration": 12,
+            "Unit": "Month"
+        },
+        "Progress": {
+            "CompletedPeriods": 0
+        },
+        "PaymentCondition": {
+            "Type": "AtPeriodEnd"
+        },
+        "Penalty": {
+            "Type": "FixedCompensation",
+            "Amount": 500000,
+            "ResourceNumber": null,
+            "Description": "이행 불가 시 500000원 배상"
+        },
+        "TerminationCondition": {
+            "Type": "MutualSettlement",
+            "Conditions": [
+                {
+                    "ActorRole": "Seller",
+                    "Action": "TransferResource",
+                    "ResourceNumber": 1,
+                    "Amount": 1000,
+                    "TargetRole": "Buyer"
+                },
+                {
+                    "ActorRole": "Buyer",
+                    "Action": "PayMoney",
+                    "Amount": 500000,
+                    "TargetRole": "Seller"
+                }
+            ]
+        },
+        "Status": "InProgress"
+    }
+]

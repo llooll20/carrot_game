@@ -1,7 +1,7 @@
 import { TransactionResult } from '../models/TransactionResult.js';
-import { Market } from '../systems/Market.js';
 import { Transport } from '../models/Transport.js';
 import { ProductionBase } from '../models/ProductionBase.js';
+import { StorageFacility } from '../models/StorageFacility.js';
 
 export class Player {
     /** @type {number} */
@@ -12,14 +12,25 @@ export class Player {
 
     /** @type {Transport} */
     Transport;
+
     /** @type {ProductionBase[]} */
     ProductionBases;
 
+    /** @type {StorageFacility[]} */
+    StorageFacilities;
+
+    //현재 사용중인 공간
+    CurrentAmount=0;
+
+    //저장가능한 총 공간
+    CurrentTotalCapacity=0;
+
     constructor() {
         this.Money = 1000;
-        this.Resources = new Map([['carrot', 10]]);
+        this.Resources= new Map();
         this.Transport = new Transport(1, 100);
         this.ProductionBases = [];
+        this.StorageFacilities = [];
         this.NextProductionBase=1;
     }
     
@@ -69,6 +80,9 @@ export class Player {
             resourceNumber,
             currentAmount + amount
         );
+        console.log(amount,"추가!");
+        this.CurrentAmount+=amount;
+        
     }
     //플레이어의 자원 삭제
     RemoveResource(resourceNumber, amount)
@@ -80,6 +94,29 @@ export class Player {
             resourceNumber,
             currentAmount - amount
         );
+
+        this.CurrentAmount-=amount;
+    }
+
+    //플레이어의 총 자원량 계산
+    getUsedStorage(dataManager) {
+        let totalAmount = 0;
+
+        for (const [resourceNumber, amount] of this.Resources) {
+            const resource = dataManager.GetResource(resourceNumber);
+
+            if (!resource){
+                continue
+            }
+
+            // 기계는 1개당 10, 나머지는 1
+            const unitCapacity = resource.ResourceType === "Machine" ? 10 : 1;
+
+            totalAmount += amount * unitCapacity;
+        }
+
+        this.CurrentAmount = totalAmount;
+        return totalAmount;
     }
 
     // 생산기반을 플레이어에게 할당하는 메서드
@@ -106,5 +143,22 @@ export class Player {
         return this.NextProductionBase++;
     }
 
+    //저장시설 추가
+    setStorageFacility(number = 1, capacity= 100){
+        this.StorageFacilities.push(new StorageFacility(number, capacity));
+        this.CurrentTotalCapacity+=capacity;
+    }
 
+    //현재 총 저장공간 추출
+    getCapacityOfStorage() {
+        return this.CurrentTotalCapacity;
+    }
+
+    //현재 저장가능공간 추출
+    getAvailableStorage() {
+    return Math.max(
+        0,
+        this.CurrentTotalCapacity - this.CurrentAmount
+    );
+}
 }

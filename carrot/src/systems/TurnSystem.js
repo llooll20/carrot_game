@@ -3,6 +3,7 @@
 import { Market } from './Market.js';
 import { Turn } from '../models/Turn.js';
 import { ProductionProcess } from './ProductionProcess.js';
+import { StorageSystem } from './StorageSystem.js';
 
 export class TurnSystem {
 
@@ -10,8 +11,9 @@ export class TurnSystem {
         this.Turn = turn;
         this.Market = market;
         this.Player = player;
-        this.ProductionProcess=new ProductionProcess(player,dataManager);
         this.DataManager=dataManager;
+        this.ProductionProcess=new ProductionProcess(player,dataManager);
+        this.StorageSystem=new StorageSystem(player, dataManager);
     }
 
     EndTurn() {
@@ -20,6 +22,8 @@ export class TurnSystem {
         this.Player.ApplyTransactionResult(salesResult);
         this.Player.Transport.clearResources();
         this.ProductionProcess.ProcessAllProduction();
+        this.StorageSystem.ProcessDisposals();
+        this.StorageSystem.CheckStorageCapacity();
         this.Turn.NextTurn();
     }
 }

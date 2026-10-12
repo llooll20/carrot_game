@@ -55,17 +55,14 @@ export class Start extends Phaser.Scene {
         this.player = new Player();
         // 테스트용 초기값
         this.player.Money = 1000;
-        this.player.AddResource(2,100);
+        this.player.AddResource(2,10);
+        this.player.setStorageFacility(1,50);
 
         this.market = new Market(this.dataManager);
         this.map=new GameMap(10,10);
         this.turn = new Turn();
         this.turnSystem = new TurnSystem(this.turn, this.market, this.player, this.dataManager);
         
-
-       
-        // 당근 0개
-        this.player.Resources.set('carrot', 5);
 
         // -------------------------
         // UI
@@ -120,14 +117,12 @@ export class Start extends Phaser.Scene {
         const land = new ProductionBase(
             this.player.getProductionBaseNumber(),
             1,
-            2,
             { x, y }
         );
+        land.setResource(2);
 
         //직원 배치
         land.setAssingedEmployee(employee);
-        console.log("land:", land);
-        console.log("직원:", employee);
         land.onActivate();
 
         this.player.ProductionBases.push(land);
@@ -354,6 +349,11 @@ export class Start extends Phaser.Scene {
             console.log('턴 종료');
 
             this.turnSystem.EndTurn(this.turn, this.market, this.player);
+
+            console.log("플레이어의 총 저장공간", this.player.getCapacityOfStorage());
+            console.log("플레이어의 가용 저장공간", this.player.getAvailableStorage());
+            console.log("플레이어의 자원량", this.player.CurrentAmount);
+            console.log(this.player.Resources);
 
             this.updateUI();
         });

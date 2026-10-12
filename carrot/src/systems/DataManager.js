@@ -12,11 +12,20 @@ export class DataManager {
         this.marketData = market;
     }
 
+    GetAllResource()
+    {
+        return this.resourceData;
+    }
+
     GetResource(resourceNumber) {
         return this.resourceData.find(
             resource =>
                 resource.ResourceNumber === resourceNumber
         );
+    }
+
+    GetAllRecipe() {
+        return this.recipeData;
     }
 
     GetRecipe(materialNumber) {
