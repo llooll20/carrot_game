@@ -7,6 +7,12 @@ export class Player {
     /** @type {number} */
     Money;
 
+    /** @type {number} */
+    Credit;
+
+    /** @type {{ ContractId: number, Status: string }[]} */
+    Contracts;
+
     /** @type {Map<Resource, number>} */
     Resources;
 
@@ -27,6 +33,8 @@ export class Player {
 
     constructor() {
         this.Money = 1000;
+        this.Credit = 0;
+        this.Contracts = [];
         this.Resources= new Map();
         this.Transport = new Transport(1, 100);
         this.ProductionBases = [];
