@@ -6,6 +6,7 @@ import { DataManager } from '../systems/DataManager.js';
 import { ProductionBase } from '../models/ProductionBase.js'
 import { GameMap } from '../domain/GameMap.js';
 import { Employee } from '../domain/Employee.js';
+import { Bank } from '../domain/Bank.js';
 
 export class Start extends Phaser.Scene {
 
@@ -19,6 +20,8 @@ export class Start extends Phaser.Scene {
         this.load.json('Resource', 'src/data/Resource.json');
         this.load.json('Recipe', 'src/data/Recipe.json');
         this.load.json('Market', 'src/data/Market.json');
+        this.load.json('ProductionBase', 'src/data/ProductionBase.json');
+        this.load.json('Contract', 'src/data/Contract.json');
 
     }
 
@@ -55,6 +58,7 @@ export class Start extends Phaser.Scene {
         this.player = new Player();
         // 테스트용 초기값
         this.player.Money = 1000;
+        this.player.CreditRating = 2;
         this.player.AddResource(2,10);
         this.player.setStorageFacility(1,50);
 
@@ -62,6 +66,8 @@ export class Start extends Phaser.Scene {
         this.map=new GameMap(10,10);
         this.turn = new Turn();
         this.turnSystem = new TurnSystem(this.turn, this.market, this.player, this.dataManager);
+        this.bank = new Bank(1000000);
+        this.bank.AddCustomer(this.player);
         
 
         // -------------------------
@@ -74,8 +80,71 @@ export class Start extends Phaser.Scene {
         this.createTurnEndButton();
         this.createTransportUI();
         this.createMarketButton();
+        this.createDeveloperDebugAccess();
+        this.createContractSceneAccess();
+        this.createBankSceneAccess();
         this.createMap();
         this.updateUI();
+    }
+
+    createBankSceneAccess() {
+        const button = this.add.text(1000, 360, '은행', {
+            fontSize: '24px', color: '#ffffff', backgroundColor: '#5b4030',
+            padding: { left: 25, right: 25, top: 12, bottom: 12 }
+        }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+        button.on('pointerdown', this.openBankScene, this);
+        button.on('pointerover', () => button.setTint(0xffddaa));
+        button.on('pointerout', () => button.clearTint());
+    }
+
+    openBankScene() {
+        if (this.scene.isActive('BankScene')) return;
+        this.scene.pause();
+        this.scene.launch('BankScene', { player: this.player, bank: this.bank, dataManager: this.dataManager });
+    }
+
+    createContractSceneAccess() {
+        this.add.text(1000, 580, '계약서 프로토타입: F2', {
+            fontSize: '16px', color: '#ffffff', backgroundColor: '#333333', padding: { x: 8, y: 6 }
+        });
+        this.input.keyboard.on('keydown-F2', this.openContractScene, this);
+        this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+            this.input.keyboard.off('keydown-F2', this.openContractScene, this);
+        });
+    }
+
+    openContractScene() {
+        if (this.scene.isActive('ContractScene')) return;
+        const contracts = this.cache.json.get('Contract');
+        this.scene.pause();
+        this.scene.launch('ContractScene', {
+            contract: Array.isArray(contracts) ? contracts[0] : null,
+            player: this.player,
+            dataManager: this.dataManager,
+            returnScene: 'Start'
+        });
+    }
+
+    createDeveloperDebugAccess() {
+        this.add.text(1000, 540, '개발자 상태 보기: F3', {
+            fontSize: '16px', color: '#ffffff', backgroundColor: '#333333', padding: { x: 8, y: 6 }
+        });
+        this.input.keyboard.on('keydown-F3', this.openDeveloperDebugScene, this);
+        this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+            this.input.keyboard.off('keydown-F3', this.openDeveloperDebugScene, this);
+        });
+    }
+
+    openDeveloperDebugScene() {
+        if (this.scene.isActive('DeveloperDebugScene')) return;
+
+        this.scene.launch('DeveloperDebugScene', {
+            player: this.player,
+            market: this.market,
+            turn: this.turn,
+            turnSystem: this.turnSystem,
+            dataManager: this.dataManager
+        });
     }
 
     createMap() {
