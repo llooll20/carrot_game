@@ -1,4 +1,5 @@
 import { Contract } from '../models/Contract.js';
+import { TransferSystem } from './TransferSystem.js';
 
 // 계약 생성과 참여자별 계약 목록을 관리하는 시스템
 export class ContractSystem {
@@ -7,6 +8,7 @@ export class ContractSystem {
         this.ContractData = contractData;
         this.Contracts = contractData;
         this.Contractors = new Map();
+        this.TransferSystem = new TransferSystem();
         this.Latest_Id = contractData.reduce(
             (latestId, contract) => Math.max(latestId, contract.Contract_Id ?? 0),
             0
@@ -21,7 +23,8 @@ export class ContractSystem {
         terminationType, termination1ActorRole, termination1Action,
         termination1ResourceNumber, termination1Amount, termination1TargetRole,
         termination2ActorRole, termination2Action, termination2Amount,
-        termination2ResourceNumber, termination2TargetRole
+        termination2ResourceNumber, termination2TargetRole,
+        interestRate = 0.04, interestRateType = 'Fixed'
     ) {
         const contract = new Contract(
             ++this.Latest_Id,
@@ -70,7 +73,9 @@ export class ContractSystem {
                     }
                 ]
             },
-            'Scheduled'
+            'Scheduled',
+            interestRate,
+            interestRateType
         );
 
         this.Contracts.push(contract);
@@ -136,6 +141,75 @@ export class ContractSystem {
         return false;
     }
 
+    // 월의 마지막 턴에 진행 중인 계약의 이행 기간을 처리한다.
+    ProgressContracts() {
+        const results = [];
+        for (const contract of this.Contracts) {
+            if (!contract || contract.Status !== 'InProgress' ||
+                !Number.isFinite(contract.Period?.Duration) ||
+                !Number.isFinite(contract.Progress?.CompletedPeriods) ||
+                contract.Progress.CompletedPeriods >= contract.Period.Duration) {
+                continue;
+            }
+
+            const content = contract.Content;
+            if (!content || (content.Amount == null && content.ResourceNumber == null)) {
+                continue;
+            }
+
+            const transferResult = content.ResourceNumber != null
+                ? this.TransferContractResource(contract, content.ResourceNumber, content.Amount)
+                : this.TransferContractMoney(contract, content.Amount);
+            if (!transferResult.Success) {
+                results.push({
+                    Contract_Id: contract.Contract_Id,
+                    Updated: false,
+                    Completed: false,
+                    Reason: transferResult.Reason
+                });
+                continue;
+            }
+
+            contract.Progress.CompletedPeriods += 1;
+            results.push({
+                Contract_Id: contract.Contract_Id,
+                Updated: true,
+                Completed: this.UpdateContractStatus(contract),
+                Reason: null
+            });
+        }
+        if (results.some(result => result.Updated)) this.SaveContractData();
+        return results;
+    }
+
+    // 계약 Content에 명시된 역할 사이에서 금액을 이전한다.
+    TransferContractMoney(contract, amount) {
+        const { from, to } = this.GetContractTransferParticipants(contract);
+        return this.TransferSystem.Transfer(from, to, amount);
+    }
+
+    // 계약 Content에 명시된 역할 사이에서 자원을 이전한다.
+    TransferContractResource(contract, resourceNumber, amount) {
+        const { from, to } = this.GetContractTransferParticipants(contract);
+        return this.TransferSystem.Transfer(from, to, resourceNumber, amount);
+    }
+
+    // Content.From/To 역할에 해당하는 계약 당사자 객체를 찾는다.
+    GetContractTransferParticipants(contract) {
+        const parties = contract?.Participants?.Parties;
+        const content = contract?.Content;
+        const fromActor = Array.isArray(parties)
+            ? parties.find(party => party?.Role === content?.From)
+            : null;
+        const toActor = Array.isArray(parties)
+            ? parties.find(party => party?.Role === content?.To)
+            : null;
+        return {
+            from: this.FindContractor(fromActor),
+            to: this.FindContractor(toActor)
+        };
+    }
+
     // 계약 해지 조건을 확인하고 해지를 처리한다.
     CancelContract(contract) {
         if (!contract || contract.Status !== 'InProgress' ||
@@ -197,7 +271,7 @@ export class ContractSystem {
             return false;
         }
 
-        const actorId = contractor.ActorId ?? contractor.Id ?? contractor.Number;
+        const actorId = contractor.ActorId ?? contractor.CustomerId ?? contractor.Id ?? contractor.Number;
         const actorType = contractor.ActorType ?? (contractor.Credit !== undefined ? 'Player' : 'NPC');
 
         return contract.Participants.Parties.some(party =>
@@ -212,7 +286,7 @@ export class ContractSystem {
 
     // 주체 유형과 ID를 조합해 식별 키를 만든다.
     GetActorKey(actor) {
-        return `${actor?.ActorType}:${actor?.ActorId ?? actor?.Id ?? actor?.Number}`;
+        return `${actor?.ActorType}:${actor?.ActorId ?? actor?.CustomerId ?? actor?.Id ?? actor?.Number}`;
     }
 
     // 현재 계약 데이터 스냅샷을 브라우저 저장소에 기록한다.

@@ -2,8 +2,9 @@ import { TransactionResult } from '../models/TransactionResult.js';
 import { Transport } from '../models/Transport.js';
 import { ProductionBase } from '../models/ProductionBase.js';
 import { StorageFacility } from '../models/StorageFacility.js';
+import { IExchangeParticipant } from './interfaces/IExchangeParticipant.js';
 
-export class Player {
+export class Player extends IExchangeParticipant {
     /** @type {number} */
     Money;
 
@@ -32,6 +33,7 @@ export class Player {
     CurrentTotalCapacity=0;
 
     constructor() {
+        super();
         this.Money = 1000;
         this.Credit = 0;
         this.Contracts = [];
@@ -40,6 +42,36 @@ export class Player {
         this.ProductionBases = [];
         this.StorageFacilities = [];
         this.NextProductionBase=1;
+    }
+
+    getMoney() {
+        return this.Money;
+    }
+
+    addMoney(amount) {
+        if (Number.isFinite(amount) && amount > 0) this.Money += amount;
+    }
+
+    removeMoney(amount) {
+        if (!Number.isFinite(amount) || amount <= 0 || this.Money < amount) return false;
+        this.Money -= amount;
+        return true;
+    }
+
+    getResource(resourceNumber) {
+        return this.Resources.get(resourceNumber) ?? 0;
+    }
+
+    addResource(resourceNumber, amount) {
+        if (resourceNumber == null || !Number.isFinite(amount) || amount <= 0) return;
+        this.AddResource(resourceNumber, amount);
+    }
+
+    removeResource(resourceNumber, amount) {
+        const currentAmount = this.getResource(resourceNumber);
+        if (!Number.isFinite(amount) || amount <= 0 || currentAmount < amount) return false;
+        this.RemoveResource(resourceNumber, amount);
+        return true;
     }
     
     // 구매를 위해 상품 거래를 요청하고 결과를 플레이어 상태에 반영하는 메서드

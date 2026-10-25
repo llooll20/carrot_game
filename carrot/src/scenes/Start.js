@@ -1,5 +1,5 @@
 import { Player } from '../domain/Player.js';
-import { Market } from '../systems/Market.js';
+import { Market } from '../domain/Market.js';
 import { TurnSystem } from '../systems/TurnSystem.js';
 import { Turn } from '../models/Turn.js';
 import { DataManager } from '../systems/DataManager.js';
@@ -7,6 +7,7 @@ import { ProductionBase } from '../models/ProductionBase.js'
 import { GameMap } from '../domain/GameMap.js';
 import { Employee } from '../domain/Employee.js';
 import { Bank } from '../domain/Bank.js';
+import { ContractSystem } from '../systems/ContractSystem.js';
 
 export class Start extends Phaser.Scene {
 
@@ -65,9 +66,18 @@ export class Start extends Phaser.Scene {
         this.market = new Market(this.dataManager);
         this.map=new GameMap(10,10);
         this.turn = new Turn();
-        this.turnSystem = new TurnSystem(this.turn, this.market, this.player, this.dataManager);
         this.bank = new Bank(1000000);
         this.bank.AddCustomer(this.player);
+        const contracts = this.cache.json.get('Contract');
+        this.bank.LoadContracts(contracts);
+        // Bank.LoadContracts historically omits Contract_Id 1; keep the JSON catalogue intact here.
+        this.bank.Contracts = Array.isArray(contracts) ? [...contracts] : [];
+        this.contractSystem = new ContractSystem(contracts);
+        this.contractSystem.Contractors.set('Player:1', this.player);
+        this.contractSystem.Contractors.set('Bank:1', this.bank);
+        this.turnSystem = new TurnSystem(
+            this.turn, this.market, this.player, this.dataManager, this.contractSystem
+        );
         
 
         // -------------------------
@@ -76,6 +86,7 @@ export class Start extends Phaser.Scene {
 
         this.createPlayerUI();
         this.createMarketUI();
+        this.createTurnCalendarUI();
         this.createLoadButton();
         this.createTurnEndButton();
         this.createTransportUI();
@@ -118,8 +129,10 @@ export class Start extends Phaser.Scene {
         const contracts = this.cache.json.get('Contract');
         this.scene.pause();
         this.scene.launch('ContractScene', {
-            contract: Array.isArray(contracts) ? contracts[0] : null,
+            contract: this.contractSystem?.Contracts?.find(contract => contract.Contract_Id === 1) ??
+                (Array.isArray(contracts) ? contracts[0] : null),
             player: this.player,
+            contractSystem: this.contractSystem,
             dataManager: this.dataManager,
             returnScene: 'Start'
         });
@@ -164,7 +177,6 @@ export class Start extends Phaser.Scene {
 
                 tile.setStrokeStyle(1, 0xffffff);
                 tile.setInteractive();
-
                 //화면의 타일 객체 저장
                 this.tileObjects.set(`${x},${y}`, tile);
 
@@ -177,9 +189,33 @@ export class Start extends Phaser.Scene {
     onTileClicked(x, y) {
         const employee = new Employee(1,"Lee")
         const tile = this.map.getTile(x, y);
+        const tileObject = this.tileObjects.get(`${x},${y}`);
 
         if (tile.ProductionBase !== null) {
+            const productionBase = this.player.ProductionBases.find(base =>
+                base.Position.x === x && base.Position.y === y
+            );
+            if (productionBase?.getProductionState() === 'Harvestable') {
+                this.harvestProductionBase(productionBase);
+                return;
+            }
+
+            if (productionBase?.isProductionStateEmpty() && productionBase.getInputResources().size === 0) {
+                const inputResourceNumber = 2;
+                const initialInputAmount = 1;
+                if (!this.player.removeResource(inputResourceNumber, initialInputAmount)) {
+                    console.log('투입할 자원이 부족합니다.');
+                    return;
+                }
+
+                productionBase.setInputResource(inputResourceNumber, initialInputAmount);
+                tileObject.setFillStyle(0x00ff00);
+                this.updateUI();
+                return;
+            }
+
             console.log('이미 생산 기반이 있습니다.');
+
             return;
         }
 
@@ -188,20 +224,27 @@ export class Start extends Phaser.Scene {
             1,
             { x, y }
         );
-        land.setResource(2);
 
-        //직원 배치
-        land.setAssingedEmployee(employee);
+        tileObject.setFillStyle(0x808080);
+
         land.onActivate();
 
         this.player.ProductionBases.push(land);
         tile.ProductionBase = 1;
 
-        const tileObject = this.tileObjects.get(`${x},${y}`);
-        tileObject.setFillStyle(0x00ff00);
-
         console.log('토지 설치 완료');
         console.log('플레이어 생산기반:', this.player.ProductionBases);
+    }
+
+    harvestProductionBase(productionBase) {
+        for (const [resourceNumber, amount] of productionBase.getProducedResources()) {
+            this.player.AddResource(resourceNumber, amount);
+            productionBase.setProducedResource(resourceNumber, 0);
+        }
+        productionBase.clearProgress();
+        const { x, y } = productionBase.Position;
+        this.tileObjects.get(`${x},${y}`)?.setFillStyle(0x808080);
+        this.updateUI();
     }
 
     update() {
@@ -253,6 +296,16 @@ export class Start extends Phaser.Scene {
             }
         );
     }
+
+    createTurnCalendarUI() {
+        this.turnCalendarText = this.add.text(640, 20, '', {
+            fontSize: '22px',
+            color: '#ffffff',
+            backgroundColor: '#333333',
+            padding: { left: 12, right: 12, top: 8, bottom: 8 }
+        }).setOrigin(0.5, 0);
+    }
+
     createMarketButton() {
     const button = this.add.text(
         1000,
@@ -418,6 +471,7 @@ export class Start extends Phaser.Scene {
             console.log('턴 종료');
 
             this.turnSystem.EndTurn(this.turn, this.market, this.player);
+            this.restoreCompletedProductionTiles();
 
             console.log("플레이어의 총 저장공간", this.player.getCapacityOfStorage());
             console.log("플레이어의 가용 저장공간", this.player.getAvailableStorage());
@@ -436,7 +490,29 @@ export class Start extends Phaser.Scene {
         });
     }
 
+    restoreCompletedProductionTiles() {
+        for (const productionBase of this.player.ProductionBases) {
+            const { x, y } = productionBase.Position;
+            const tileObject = this.tileObjects.get(`${x},${y}`);
+            if (!tileObject) continue;
+
+            const state = productionBase.getProductionState();
+            if (state === 'Harvestable') {
+                tileObject.setFillStyle(0x8b4513);
+            } else if (state === 'Growing' || productionBase.getInputResources().size > 0) {
+                tileObject.setFillStyle(0x00ff00);
+            } else {
+                tileObject.setFillStyle(0x808080);
+            }
+        }
+    }
+
     updateUI() {
+
+        const currentTurn = this.turn?.CurrentTurn ?? 0;
+        this.turnCalendarText?.setText(currentTurn > 0
+            ? `턴 ${currentTurn}주차  ·  ${this.turn.GetYear()}년 ${this.turn.GetMonth()}월`
+            : '게임 시작 전');
 
         const resource = 1; // 당근의 ResourceNumber
 

@@ -1,5 +1,5 @@
 import { Start } from './scenes/Start.js';
-import { MarketWindow } from './scenes/MarketWindow.js';
+import { MarketScene as MarketWindow } from './scenes/MarketScene.js';
 import { DeveloperDebugScene } from './scenes/DeveloperDebugScene.js';
 import { ContractScene } from './scenes/ContractScene.js';
 import { BankScene } from './scenes/BankSecene.js';

@@ -1,11 +1,15 @@
 // 은행의 자금, 고객 및 금융 계약을 관리하고 대출·예금·보험 처리를 담당한다.
 import { Contract } from '../models/Contract.js';
+import { IExchangeParticipant } from './interfaces/IExchangeParticipant.js';
 
-export class Bank {
+export class Bank extends IExchangeParticipant {
     // 은행의 초기 자금과 기본 금리를 설정하고 관리 목록을 초기화한다.
     constructor(funds = 0, baseInterestRates = 0.04) {
+        super();
         // 은행이 보유한 자금
         this.Funds = funds;
+        // 교환 인터페이스 호환용 자원 보유량(은행 자원 시스템은 미구현)
+        this.Resources = new Map();
         // 은행이 제공하는 대출, 예금, 보험 계약 목록
         this.LoanProducts = [];
         this.DepositProducts = [];
@@ -23,6 +27,36 @@ export class Bank {
         // 고객 및 계약 ID 발급을 위한 다음 번호
         this.NextCustomerId = 1;
         this.LatestContractId = 0;
+    }
+
+    getMoney() {
+        return this.Funds;
+    }
+
+    addMoney(amount) {
+        if (Number.isFinite(amount) && amount > 0) this.Funds += amount;
+    }
+
+    removeMoney(amount) {
+        if (!Number.isFinite(amount) || amount <= 0 || this.Funds < amount) return false;
+        this.Funds -= amount;
+        return true;
+    }
+
+    getResource(resourceNumber) {
+        return this.Resources.get(resourceNumber) ?? 0;
+    }
+
+    addResource(resourceNumber, amount) {
+        if (resourceNumber == null || !Number.isFinite(amount) || amount <= 0) return;
+        this.Resources.set(resourceNumber, this.getResource(resourceNumber) + amount);
+    }
+
+    removeResource(resourceNumber, amount) {
+        const currentAmount = this.getResource(resourceNumber);
+        if (!Number.isFinite(amount) || amount <= 0 || currentAmount < amount) return false;
+        this.Resources.set(resourceNumber, currentAmount - amount);
+        return true;
     }
 
     // 신용 등급과 은행 자금을 확인한 뒤 고객에게 대출한다.
@@ -98,6 +132,19 @@ export class Bank {
             this.LatestContractId = Math.max(this.LatestContractId, contract.Contract_Id);
         }
         this.Contracts.push(contract);
+        return true;
+    }
+
+    // JSON에서 불러온 계약 중 은행 금융 계약을 목록에 등록한다.
+    LoadContracts(contracts = []) {
+        if (!Array.isArray(contracts)) return false;
+        this.Contracts = contracts.filter(contract =>
+            contract && contract.Contract_Id !== 1
+        );
+        this.LatestContractId = this.Contracts.reduce(
+            (latestId, contract) => Math.max(latestId, contract.Contract_Id ?? 0),
+            this.LatestContractId
+        );
         return true;
     }
 

@@ -3,11 +3,13 @@ export class ContractScene extends Phaser.Scene {
         super('ContractScene');
         this.playerSigned = false;
         this.submitting = false;
+        this.pausedScenes = [];
     }
 
     init(data) {
         this.contract = data?.contract;
         this.player = data?.player;
+        this.contractSystem = data?.contractSystem;
         this.dataManager = data?.dataManager;
         this.returnScene = data?.returnScene ?? 'Start';
         this.playerSigned = false;
@@ -16,6 +18,9 @@ export class ContractScene extends Phaser.Scene {
     }
 
     create() {
+        this.pauseBackgroundScenes();
+        this.scene.bringToTop();
+
         const width = this.scale.width;
         const height = this.scale.height;
         this.add.rectangle(width / 2, height / 2, width, height, 0x090909, 0.78)
@@ -232,6 +237,23 @@ export class ContractScene extends Phaser.Scene {
             return;
         }
 
+        if (this.contract.Contract_Id === 1 && this.contractSystem) {
+            if (!this.contractSystem.ApproveContract(this.player, this.contract)) {
+                this.signatureResult?.setText('계약을 체결하지 못했습니다. 계약 상태와 당사자를 확인하세요.');
+                return;
+            }
+
+            this.playerSigned = true;
+            this.contractStatusText?.setText('계약 상태: 진행 중');
+            this.signatureResult?.setText('서명이 완료되어 계약이 진행 상태로 변경되었습니다.');
+            this.signatureStates.filter(item => item.playerActor).forEach(({ box, state }) => {
+                state.setText('서명 완료').setColor('#315c3b');
+                box.disableInteractive();
+                state.disableInteractive();
+            });
+            return;
+        }
+
         this.playerSigned = true;
         this.contract.Status = 'Completed';
         const playerContract = this.player?.Contracts?.find?.(item =>
@@ -255,9 +277,29 @@ export class ContractScene extends Phaser.Scene {
     closeScene() {
         this.scene.stop();
         this.scene.resume(this.returnScene);
+        this.resumeBackgroundScenes();
+    }
+
+    pauseBackgroundScenes() {
+        this.pausedScenes = [];
+        const activeScenes = this.scene.manager.getScenes(true);
+        activeScenes.forEach(scene => {
+            const key = scene.sys.settings.key;
+            if (key === 'ContractScene' || key === this.returnScene || this.scene.isPaused(key)) return;
+            this.scene.pause(key);
+            this.pausedScenes.push(key);
+        });
+    }
+
+    resumeBackgroundScenes() {
+        this.pausedScenes.forEach(key => {
+            if (this.scene.isPaused(key)) this.scene.resume(key);
+        });
+        this.pausedScenes = [];
     }
 
     cleanup() {
+        this.resumeBackgroundScenes();
         this.input.off('wheel', this.handleWheel, this);
         this.input.keyboard.off('keydown-ESC', this.closeScene, this);
         this.closeButton?.removeAllListeners();

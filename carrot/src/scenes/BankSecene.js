@@ -155,31 +155,36 @@ export class BankScene extends Phaser.Scene {
             this.makeRightButton(54 + index * 112, 44, 102, 38, item, () => this.showProducts(item),
                 item === filter ? 0x765638 : 0x45484b);
         });
-        const productGroups = [
-            ['대출', this.bank?.LoanProducts],
-            ['예금', this.bank?.DepositProducts],
-            ['보험', this.bank?.InsuranceProducts]
-        ];
-        const products = productGroups
-            .filter(([type]) => filter === '전체' || type === filter)
-            .flatMap(([type, items]) => (Array.isArray(items) ? items : []).map(item => ({ type, item })));
+        const typeLabels = {
+            Loan: '대출', Deposit: '예금', Insurance: '보험', Trade: '거래',
+            Employment: '고용', Lease: '임대', SecuredLoan: '담보 대출', Settlement: '위약금·합의'
+        };
+        const contractedIds = new Set((Array.isArray(this.player?.Contracts) ? this.player.Contracts : [])
+            .map(contract => contract?.ContractId ?? contract?.Contract_Id)
+            .filter(id => id != null));
+        const products = (Array.isArray(this.bank?.Contracts) ? this.bank.Contracts : [])
+            .filter(item => item && !contractedIds.has(item.Contract_Id))
+            .map(item => ({ type: typeLabels[item.ContractType] ?? item.ContractType ?? '유형 없음', item }))
+            .filter(({ type }) => filter === '전체' || type === filter);
         if (!products.length) {
-            this.addRightText('등록된 금융 상품이 없습니다.', 0, 100, 18);
+            this.addRightText('등록된 미체결 계약이 없습니다.', 0, 100, 18);
             return;
         }
         products.forEach(({ type, item }, index) => {
             const y = 96 + index * 78;
             const title = item?.Name ?? `${type} 상품`;
             this.addRightText(`${title} · ${type}`, 0, y, 17, true);
-            const rate = item?.Content?.InterestRate ?? item?.Content?.Rate;
+            const rate = item?.InterestRate ?? item?.Content?.InterestRate ?? item?.Content?.Rate;
             const details = [
                 rate != null && `금리 ${rate}`,
                 item?.Content?.Amount != null && `한도/금액 ${item.Content.Amount}`,
+                item?.Content?.Premium != null && `보험료 ${item.Content.Premium}`,
+                item?.Content?.Payout != null && `보험금 ${item.Content.Payout}`,
                 item?.Period?.Duration != null && `기간 ${item.Period.Duration} ${item.Period.Unit ?? ''}`,
                 item?.Content?.Description && `설명 ${item.Content.Description}`
             ].filter(Boolean);
             this.addRightText(details.join(' · ') || '등록된 상세 조건 없음', 0, y + 25, 14);
-            this.makeRightButton(this.contentWidth - 58, y + 34, 112, 34, '상세 보기', () => this.showProductDetail(type, item), 0x4a4d50);
+            this.makeRightButton(this.contentWidth - 58, y + 34, 112, 34, '계약 보기', () => this.openContract(item), 0x4a4d50);
         });
     }
 
@@ -190,9 +195,12 @@ export class BankScene extends Phaser.Scene {
         const content = item?.Content ?? {};
         const period = item?.Period ?? {};
         const lines = [
+            item?.InterestRate != null && `금리: ${item.InterestRate} (${item.InterestRateType ?? '유형 정보 없음'})`,
             content.InterestRate != null && `금리: ${content.InterestRate}`,
             content.Rate != null && `금리: ${content.Rate}`,
             content.Amount != null && `금액/한도: ${content.Amount}`,
+            content.Premium != null && `보험료: ${content.Premium}`,
+            content.Payout != null && `보험금: ${content.Payout}`,
             period.Duration != null && `기간: ${period.Duration} ${period.Unit ?? ''}`,
             content.Description && `설명: ${content.Description}`
         ].filter(Boolean);
@@ -202,38 +210,33 @@ export class BankScene extends Phaser.Scene {
 
     showContracts() {
         this.startRightPanel('내 계약');
-        const customerId = this.bank?.GetCustomerId?.(this.player);
-        const contracts = this.bank?.GetCustomerContracts?.(customerId) ?? [];
         const playerSummaries = Array.isArray(this.player?.Contracts) ? this.player.Contracts : [];
-        if (!contracts.length && !playerSummaries.length) {
+        if (!playerSummaries.length) {
             this.addRightText('체결한 계약이 없습니다.', 0, 52, 18);
             return;
         }
         let y = 48;
-        if (contracts.length) {
-            this.addRightText('은행 계약', 0, y, 18, true);
-            y += 30;
-            contracts.forEach(contract => {
-                this.addRightText(`ID ${contract?.Contract_Id ?? '확인 불가'} · ${contract?.Name ?? '이름 없음'} · ${contract?.ContractType ?? '유형 없음'} · ${contract?.Status ?? '상태 없음'}`, 0, y, 15);
+        this.addRightText('플레이어 계약', 0, y, 18, true);
+        y += 30;
+        const bankContracts = Array.isArray(this.bank?.Contracts) ? this.bank.Contracts : [];
+        playerSummaries.forEach(summary => {
+            const contractId = summary?.ContractId ?? summary?.Contract_Id;
+            const contract = bankContracts.find(item => item?.Contract_Id === contractId) ?? summary;
+            this.addRightText(`ID ${contractId ?? '확인 불가'} · ${contract?.Name ?? '이름 없음'} · ${contract?.ContractType ?? '유형 없음'} · ${summary?.Status ?? contract?.Status ?? '상태 없음'}`, 0, y, 15);
+            if (contract?.Contract_Id != null) {
                 this.makeRightButton(this.contentWidth - 62, y + 18, 120, 34, '계약 보기', () => this.openContract(contract), 0x4a4d50);
-                y += 62;
-            });
-        }
-        if (playerSummaries.length) {
-            this.addRightText('플레이어 계약 요약', 0, y, 18, true);
-            y += 30;
-            playerSummaries.forEach(contract => {
-                this.addRightText(`ID ${contract?.ContractId ?? '확인 불가'} · 상태 ${contract?.Status ?? '확인 불가'}`, 0, y, 15);
-                y += 30;
-            });
-        }
+            }
+            y += 62;
+        });
     }
 
     openContract(contract) {
+        const contractSystem = this.scene.get('Start')?.contractSystem;
         this.scene.pause();
         this.scene.launch('ContractScene', {
             contract,
             player: this.player,
+            contractSystem,
             dataManager: this.dataManager,
             returnScene: 'BankScene'
         });

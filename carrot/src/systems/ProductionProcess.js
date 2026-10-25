@@ -7,77 +7,60 @@ export class ProductionProcess {
     constructor(player, dataManager) {
         this.Owner=player;
         this.DataManager=dataManager;
+        this.ActiveRecipes = new Map();
     }
 
     ProcessAllProduction()
     {
-        //모든 생산 기반 순회
+        const recipes = this.DataManager.GetAllRecipe?.() ?? [];
+
         for (const productionBase of this.Owner.ProductionBases) {
-            const materialNumber = productionBase.AssignedResource;
+            let recipe = this.ActiveRecipes.get(productionBase);
 
-             if (materialNumber === null) {
-                continue;
-            }
+            if (productionBase.isProductionStateEmpty()) {
+                const inputResources = productionBase.getInputResources();
+                recipe = recipes.find(candidate =>
+                    candidate.ProductionBaseNumber === productionBase.getBaseType() &&
+                    candidate.Materials?.length > 0 &&
+                    this.hasRecipeMaterials(inputResources, candidate.Materials)
+                );
 
-            //레시피 가져오기
-            const recipe = this.DataManager.GetRecipe(materialNumber);
-            if (recipe === null) {
-                continue;
-            }
+                if (!recipe) continue;
 
-            //생산 기반과 직원 조건 검사
-            if(
-                recipe.RequiredWorkers !== productionBase.getNumberOfEmployees() ||
-                recipe.ProductionBaseNumber !== productionBase.getBaseType())
-            {
-                continue;
-            }
-            
-
-            //재료의 배정 여부 확인
-            if(!productionBase.HasConsumedMaterials){
-                let hasMaterials = true;
-
-                // 필요한 재료 확인
-                for(const material of recipe.Materials){
-                    const amount = this.Owner.Resources.get(material.ResourceNumber) ?? 0;
-
-                    if(amount < material.Amount){
-                        hasMaterials=false;
+                for (const material of recipe.Materials) {
+                    if (!productionBase.removeInputResource(material.ResourceNumber, material.Amount)) {
+                        recipe = null;
                         break;
                     }
                 }
-                if(!hasMaterials){
-                    continue;
-                }
-                //생산에 필요한 재료 소비
-                for(const material of recipe.Materials){
-                    this.Owner.RemoveResource(
-                        material.ResourceNumber,
-                        material.Amount
-                    );
-                }
-                productionBase.HasConsumedMaterials=true;
+                if (!recipe) continue;
+
+                this.ActiveRecipes.set(productionBase, recipe);
+                productionBase.setProductionState("Growing");
             }
 
-            
-            // 생산 진행
+            if (productionBase.getProductionState() !== "Growing" || !recipe) continue;
+
             productionBase.IncreaseProgress();
-
-            console.log("productionBase.CurrentProgress:",productionBase.CurrentProgress);
-            console.log("recipe.CycleTime:",recipe.CycleTime);
-            //생산 완료
-            if (productionBase.CurrentProgress >= recipe.CycleTime)
-            {
-                
-                productionBase.clearProgress();
-
-                this.Owner.AddResource(
-                    recipe.ResourceNumber,
-                    recipe.OutputAmount
-                )
+            if (productionBase.CurrentProgress >= recipe.CycleTime) {
+                productionBase.addProducedResource(recipe.ResourceNumber, recipe.OutputAmount);
+                productionBase.setProductionState("Harvestable");
+                this.ActiveRecipes.delete(productionBase);
             }
-        
-        }   
+        }
+    }
+
+    hasRecipeMaterials(inputResources, materials) {
+        const requiredAmounts = new Map();
+        for (const material of materials) {
+            requiredAmounts.set(
+                material.ResourceNumber,
+                (requiredAmounts.get(material.ResourceNumber) ?? 0) + material.Amount
+            );
+        }
+
+        return [...requiredAmounts].every(([resourceNumber, amount]) =>
+            (inputResources.get(resourceNumber) ?? 0) >= amount
+        );
     }
 }
