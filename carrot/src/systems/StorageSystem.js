@@ -13,8 +13,7 @@ export class StorageSystem {
             return false;
         }
 
-        const currentAmount =
-            this.Player.Resources.get(resourceNumber) ?? 0;
+        const currentAmount = this.Player.getResource(resourceNumber);
 
         const pendingAmount =
             this.PendingDisposals.get(resourceNumber) ?? 0;
@@ -57,10 +56,10 @@ export class StorageSystem {
 
     // 턴 종료 시 폐기 처리
     ProcessDisposals() {
-        if(!this.PendingDisposals)
+        if (this.PendingDisposals.size === 0)
             return 0;
         for (const [resourceNumber, amount] of this.PendingDisposals) {
-            const currentAmount = this.Player.Resources.get(resourceNumber) ?? 0;
+            const currentAmount = this.Player.getResource(resourceNumber);
 
             // 현재 보유량 확인
             if (currentAmount < amount) {
@@ -86,17 +85,14 @@ export class StorageSystem {
             const disposalCost = amount * marketItem.Price * 0.5;
 
             // 비용 지불 가능 여부 확인
-            if (this.Player.Money < disposalCost) {
+            if (this.Player.getMoney() < disposalCost) {
                 console.log("비용지급 불가!!");
                 continue;
             }
 
             // 비용 지불 및 자원 제거
-            this.Player.Money -= disposalCost;
-            this.Player.Resources.set(
-                resourceNumber,
-                currentAmount - amount
-            );
+            if (!this.Player.removeMoney(disposalCost)) continue;
+            this.Player.removeResource(resourceNumber, amount);
         }
 
         // 처리 완료 후 폐기 목록 초기화
@@ -105,13 +101,14 @@ export class StorageSystem {
 
     // 저장 공간 초과 검사 및 벌금 부과
     CheckStorageCapacity() {
+        const usedStorage = this.Player.getUsedStorage(this.DataManager);
+        const totalCapacity = this.Player.getCapacityOfStorage();
         const excessAmount = Math.max(
             0,
-            this.Player.CurrentAmount -
-            this.Player.CurrentTotalCapacity
+            usedStorage - totalCapacity
         );
-        console.log(`벌금 계산시 플레이어 자원량`,this.Player.CurrentAmount);
-        console.log(`벌금 계산시 플레이어 총자원량`,this.Player.CurrentTotalCapacity);
+        console.log(`벌금 계산시 플레이어 자원량`, usedStorage);
+        console.log(`벌금 계산시 플레이어 총자원량`, totalCapacity);
 
         // 초과 공간이 없다면 벌금 없음
         if (excessAmount === 0) {
@@ -123,7 +120,7 @@ export class StorageSystem {
 
         const fine = excessAmount * finePerUnit;
 
-        this.Player.Money -= fine;
+        this.Player.applyStorageFine(fine);
 
         console.log(`저장 공간 초과량: ${excessAmount}`);
         console.log(`저장 공간 초과 벌금: ${fine}`);

@@ -58,6 +58,12 @@ export class Player extends IExchangeParticipant {
         return true;
     }
 
+    applyStorageFine(amount) {
+        if (!Number.isFinite(amount) || amount <= 0) return false;
+        this.Money -= amount;
+        return true;
+    }
+
     getResource(resourceNumber) {
         return this.Resources.get(resourceNumber) ?? 0;
     }
@@ -84,8 +90,11 @@ export class Player extends IExchangeParticipant {
     // 판매를 위해 운송 장치로 상품을 적재
     /** @returns {boolean} */
     setResourceToTransport(resource, amount) {
+        if (!this.removeResource(resource, amount)) {
+            return false;
+        }
+
         this.Transport.addResource(resource, amount);
-        this.Resources.set(resource, (this.Resources.get(resource) ?? 0) - amount);
         return true;
     }
 
@@ -93,7 +102,7 @@ export class Player extends IExchangeParticipant {
     /** @returns {boolean} */
     getResourceFromTransport(resource, amount) {
         const retrievedAmount = this.Transport.getResource(resource, amount);
-        this.Resources.set(resource, (this.Resources.get(resource) ?? 0) + retrievedAmount);
+        this.AddResource(resource, retrievedAmount);
         return true;    
     }
 
