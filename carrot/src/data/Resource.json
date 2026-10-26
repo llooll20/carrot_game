@@ -1,0 +1,13 @@
+[
+    {
+        "ResourceName": "Carrot",
+        "ResourceNumber": 1,
+        "ResourceType": "Vegetable"
+    },
+    {
+        "ResourceName": "Carrot_seed",
+        "ResourceNumber": 2,
+        "ResourceType": "Seed"
+    }
+
+]

@@ -1,0 +1,129 @@
+[
+    {
+        "Contract_Id": 1,
+        "Name": "10 당근 월 거래",
+        "ContractType": "Trade",
+        "Participants": {
+            "Parties": [
+                {
+                    "ActorType": "Player",
+                    "ActorId": 1,
+                    "Role": "Seller"
+                },
+                {
+                    "ActorType": "Bank",
+                    "ActorId": 1,
+                    "Role": "Buyer"
+                }
+            ]
+        },
+        "Content": {
+            "Action": "TransferResource",
+            "ResourceNumber": 1,
+            "Amount": 10,
+            "From": "Seller",
+            "To": "Buyer",
+            "Frequency": "Monthly"
+        },
+        "Period": {
+            "Duration": 12,
+            "Unit": "Month"
+        },
+        "Progress": {
+            "CompletedPeriods": 0
+        },
+        "PaymentCondition": {
+            "Type": "AtPeriodEnd"
+        },
+        "Penalty": {
+            "Type": "FixedCompensation",
+            "Amount": 500000,
+            "ResourceNumber": null
+        },
+        "Status": "Scheduled"
+    },
+    {
+        "Contract_Id": 2,
+        "Name": "무이자 예금 계약",
+        "ContractType": "Deposit",
+        "Participants": {
+            "Parties": [
+                {
+                    "ActorType": "Player",
+                    "ActorId": 1,
+                    "Role": "Depositor"
+                },
+                {
+                    "ActorType": "Bank",
+                    "ActorId": 1,
+                    "Role": "Bank"
+                }
+            ]
+        },
+        "Content": {
+            "Action": "DepositMoney",
+            "Amount": 10000,
+            "InterestRate": 0,
+            "Frequency": "Monthly"
+        },
+        "Period": {
+            "Duration": 12,
+            "Unit": "Month"
+        },
+        "Progress": {
+            "CompletedPeriods": 0
+        },
+        "PaymentCondition": {
+            "Type": "AtPeriodEnd"
+        },
+        "Penalty": {
+            "Type": "None",
+            "Amount": 0,
+            "ResourceNumber": null
+        },
+        "Status": "Scheduled"
+    },
+    {
+        "Contract_Id": 3,
+        "Name": "당근 월간 구매 계약",
+        "ContractType": "Trade",
+        "Participants": {
+            "Parties": [
+                {
+                    "ActorType": "NPC",
+                    "ActorId": 2,
+                    "Role": "Seller"
+                },
+                {
+                    "ActorType": "Player",
+                    "ActorId": 1,
+                    "Role": "Buyer"
+                }
+            ]
+        },
+        "Content": {
+            "Action": "TransferResource",
+            "ResourceNumber": 1,
+            "Amount": 500,
+            "From": "Seller",
+            "To": "Buyer",
+            "Frequency": "Monthly"
+        },
+        "Period": {
+            "Duration": 12,
+            "Unit": "Month"
+        },
+        "Progress": {
+            "CompletedPeriods": 0
+        },
+        "PaymentCondition": {
+            "Type": "AtPeriodEnd"
+        },
+        "Penalty": {
+            "Type": "FixedCompensation",
+            "Amount": 500000,
+            "ResourceNumber": null
+        },
+        "Status": "Scheduled"
+    }
+]
